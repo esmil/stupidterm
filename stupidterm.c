@@ -291,6 +291,10 @@ struct config {
 	gchar *font;
 	gchar *geometry;
 	gint lines;
+	gboolean allow_bold;
+	gboolean scroll_on_output;
+	gboolean scroll_on_keystroke;
+	gboolean mouse_autohide;
 	gchar *output_file;
 	gchar **command_argv;
 	gchar *regex;
@@ -397,6 +401,7 @@ parse_file(struct config *conf, GOptionEntry *options)
 	GKeyFile *file = g_key_file_new();
 	GError *error = NULL;
 	GOptionEntry *entry;
+	gboolean option;
 
 	g_key_file_load_from_file(file, filename,
 				G_KEY_FILE_NONE, &error);
@@ -416,6 +421,16 @@ parse_file(struct config *conf, GOptionEntry *options)
 
 	for (entry = options; entry->long_name; entry++) {
 		switch (entry->arg) {
+		case G_OPTION_ARG_NONE:
+			option = g_key_file_get_boolean(
+					file, "options",
+					entry->long_name,
+					&error);
+			if (*((gboolean *)entry->arg_data))
+				*((gboolean *)entry->arg_data) = !option;
+			else
+				*((gboolean *)entry->arg_data) = option;
+			break;
 		case G_OPTION_ARG_INT:
 			if (*((gint *)entry->arg_data) == 0)
 				*((gint *)entry->arg_data) = g_key_file_get_integer(
@@ -492,6 +507,30 @@ setup(int argc, char *argv[], int *exit_status)
 			.arg_data = &conf.output_file,
 			.description = "Save terminal contents to file at exit",
 			.arg_description = "FILE",
+		},
+		{
+			.long_name = "allow-bold",
+			.arg = G_OPTION_ARG_NONE,
+			.arg_data = &conf.allow_bold,
+			.description = "Toggle allow bold",
+		},
+		{
+			.long_name = "scroll-on-output",
+			.arg = G_OPTION_ARG_NONE,
+			.arg_data = &conf.scroll_on_output,
+			.description = "Toggle scroll on output",
+		},
+		{
+			.long_name = "scroll-on-keystroke",
+			.arg = G_OPTION_ARG_NONE,
+			.arg_data = &conf.scroll_on_keystroke,
+			.description = "Toggle scroll on keystroke",
+		},
+		{
+			.long_name = "mouse-autohide",
+			.arg = G_OPTION_ARG_NONE,
+			.arg_data = &conf.mouse_autohide,
+			.description = "Toggle autohiding the mouse cursor",
 		},
 		{
 			.long_name = G_OPTION_REMAINING,
@@ -579,10 +618,11 @@ setup(int argc, char *argv[], int *exit_status)
 			G_CALLBACK(handle_key_press), window);
 
 	/* Set some defaults. */
+	vte_terminal_set_allow_bold(terminal, conf.allow_bold);
+	vte_terminal_set_scroll_on_output(terminal, conf.scroll_on_output);
+	vte_terminal_set_scroll_on_keystroke(terminal, conf.scroll_on_keystroke);
+	vte_terminal_set_mouse_autohide(terminal, conf.mouse_autohide);
 	vte_terminal_set_cursor_blink_mode(terminal, VTE_CURSOR_BLINK_OFF);
-	vte_terminal_set_scroll_on_output(terminal, FALSE);
-	vte_terminal_set_scroll_on_keystroke(terminal, TRUE);
-	vte_terminal_set_mouse_autohide(terminal, TRUE);
 	vte_terminal_set_cursor_shape(terminal, VTE_CURSOR_SHAPE_BLOCK);
 	if (conf.lines)
 		vte_terminal_set_scrollback_lines(terminal, conf.lines);
