@@ -587,7 +587,6 @@ setup(int argc, char *argv[], int *exit_status)
 
 	/* Connect to the "button-press" event. */
 	g_signal_connect(widget, "button-press-event", G_CALLBACK(button_pressed), conf.program);
-	g_free(conf.program);
 
 	/* Connect to application request signals. */
 	g_signal_connect(widget, "iconify-window",
