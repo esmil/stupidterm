@@ -287,6 +287,13 @@ handle_key_press(GtkWidget *widget, GdkEvent *event, gpointer window)
 	return FALSE;
 }
 
+static gboolean
+handle_selection_changed(VteTerminal *terminal, gpointer data)
+{
+	vte_terminal_copy_clipboard(terminal);
+	return TRUE;
+}
+
 struct config {
 	gchar *font;
 	gchar *geometry;
@@ -295,6 +302,7 @@ struct config {
 	gboolean scroll_on_output;
 	gboolean scroll_on_keystroke;
 	gboolean mouse_autohide;
+	gboolean sync_clipboard;
 	gchar *output_file;
 	gchar **command_argv;
 	gchar *regex;
@@ -389,7 +397,6 @@ parse_urlmatch(GKeyFile *file, const gchar *filename, struct config *conf)
 		conf->program = NULL;
 		return;
 	}
-
 }
 
 static void
@@ -533,6 +540,12 @@ setup(int argc, char *argv[], int *exit_status)
 			.description = "Toggle autohiding the mouse cursor",
 		},
 		{
+			.long_name = "sync-clipboard",
+			.arg = G_OPTION_ARG_NONE,
+			.arg_data = &conf.sync_clipboard,
+			.description = "Update both primary and clipboard on selection",
+		},
+		{
 			.long_name = G_OPTION_REMAINING,
 			.arg = G_OPTION_ARG_STRING_ARRAY,
 			.arg_data = &conf.command_argv,
@@ -615,6 +628,11 @@ setup(int argc, char *argv[], int *exit_status)
 			G_CALLBACK(decrease_font_size), window);
 	g_signal_connect(widget, "key-press-event",
 			G_CALLBACK(handle_key_press), window);
+
+	/* Sync clipboard */
+	if (conf.sync_clipboard)
+		g_signal_connect(widget, "selection-changed",
+				G_CALLBACK(handle_selection_changed), NULL);
 
 	/* Set some defaults. */
 	vte_terminal_set_allow_bold(terminal, conf.allow_bold);
