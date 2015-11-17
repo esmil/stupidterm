@@ -298,6 +298,7 @@ struct config {
 	gchar *font;
 	gchar *geometry;
 	gint lines;
+	gchar *name;
 	gboolean allow_bold;
 	gboolean scroll_on_output;
 	gboolean scroll_on_keystroke;
@@ -516,6 +517,12 @@ setup(int argc, char *argv[], int *exit_status)
 			.arg_description = "FILE",
 		},
 		{
+			.long_name = "name",
+			.arg = G_OPTION_ARG_STRING,
+			.arg_data = &conf.name,
+			.description = "Specify the wmclass and name hint for the window",
+		},
+		{
 			.long_name = "allow-bold",
 			.arg = G_OPTION_ARG_NONE,
 			.arg_data = &conf.allow_bold,
@@ -573,6 +580,11 @@ setup(int argc, char *argv[], int *exit_status)
 	/* Create a window to hold the scrolling shell, and hook its
 	 * delete event to the quit function.. */
 	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+
+	if (conf.name) {
+		gtk_window_set_wmclass(GTK_WINDOW(window), conf.name, conf.name);
+		g_free(conf.name);
+	}
 
 	/* Set RGBA colormap */
 	screen = gtk_widget_get_screen(window);
