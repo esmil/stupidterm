@@ -520,7 +520,7 @@ setup(int argc, char *argv[], int *exit_status)
 			.long_name = "name",
 			.arg = G_OPTION_ARG_STRING,
 			.arg_data = &conf.name,
-			.description = "Specify the wmclass and name hint for the window",
+			.description = "Specify the role for the window",
 		},
 		{
 			.long_name = "allow-bold",
@@ -582,7 +582,7 @@ setup(int argc, char *argv[], int *exit_status)
 	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 
 	if (conf.name) {
-		gtk_window_set_wmclass(GTK_WINDOW(window), conf.name, conf.name);
+		gtk_window_set_role(GTK_WINDOW(window), conf.name);
 		g_free(conf.name);
 	}
 
