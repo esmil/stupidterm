@@ -582,7 +582,7 @@ setup(int argc, char *argv[], int *exit_status)
 	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 
 	if (conf.name) {
-		gtk_window_set_wmclass(GTK_WINDOW(window), conf.name, conf.name);
+		gtk_window_set_role(GTK_WINDOW(window), conf.name);
 		g_free(conf.name);
 	}
 
