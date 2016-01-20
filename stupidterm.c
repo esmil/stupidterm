@@ -282,6 +282,14 @@ handle_key_press(GtkWidget *widget, GdkEvent *event, gpointer window)
 			decrease_font_size(widget, window);
 			return TRUE;
 		}
+		switch (gdk_keyval_to_lower(((GdkEventKey*)event)->keyval)) {
+		case GDK_KEY_c:
+		    vte_terminal_copy_clipboard((VteTerminal*)widget);
+		    return TRUE;
+		case GDK_KEY_v:
+		    vte_terminal_paste_clipboard((VteTerminal*)widget);
+		    return TRUE;
+		}
 	}
 
 	return FALSE;
