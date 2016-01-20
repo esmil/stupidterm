@@ -49,6 +49,12 @@ char_size_realized(GtkWidget *widget, gpointer window)
 }
 
 static void
+handle_bell(GtkWidget *widget, gpointer window)
+{
+	gtk_window_set_urgency_hint(GTK_WINDOW(window), TRUE);
+}
+
+static void
 destroy_and_quit(VteTerminal *terminal, GtkWidget *window)
 {
 	const char *output_file = g_object_get_data(G_OBJECT(terminal), "output_file");
@@ -304,6 +310,7 @@ struct config {
 	gboolean scroll_on_keystroke;
 	gboolean mouse_autohide;
 	gboolean sync_clipboard;
+	gboolean urgent_on_bell;
 	gchar *output_file;
 	gchar **command_argv;
 	gchar *regex;
@@ -553,6 +560,12 @@ setup(int argc, char *argv[], int *exit_status)
 			.description = "Update both primary and clipboard on selection",
 		},
 		{
+			.long_name = "urgent-on-bell",
+			.arg = G_OPTION_ARG_NONE,
+			.arg_data = &conf.urgent_on_bell,
+			.description = "Set window urgency hint on bell",
+		},
+		{
 			.long_name = G_OPTION_REMAINING,
 			.arg = G_OPTION_ARG_STRING_ARRAY,
 			.arg_data = &conf.command_argv,
@@ -640,6 +653,12 @@ setup(int argc, char *argv[], int *exit_status)
 			G_CALLBACK(decrease_font_size), window);
 	g_signal_connect(widget, "key-press-event",
 			G_CALLBACK(handle_key_press), window);
+
+	/* Connect to bell signal */
+	if (conf.urgent_on_bell) {
+	    g_signal_connect(widget, "bell",
+			     G_CALLBACK(handle_bell), window);
+	}
 
 	/* Sync clipboard */
 	if (conf.sync_clipboard)
