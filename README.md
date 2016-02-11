@@ -5,7 +5,7 @@ About
 -----
 
 This is a simple wrapper around the VTE terminal emulator
-widget for GTK+. It's main feature is to easily start new
+widget for GTK+. Its main feature is to easily start new
 terminal windows from the command line. Eg.
 
 ```sh
