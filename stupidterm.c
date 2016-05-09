@@ -692,7 +692,7 @@ setup(int argc, char *argv[], int *exit_status)
 		g_free(conf.font);
 	}
 	if (conf.regex) {
-		GRegex *regex = g_regex_new(conf.regex, 0, 0, NULL);
+		GRegex *regex = g_regex_new(conf.regex, G_REGEX_MULTILINE, 0, NULL);
 		int id = vte_terminal_match_add_gregex(terminal, regex, 0);
 
 		g_regex_unref(regex);
