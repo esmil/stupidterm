@@ -310,7 +310,6 @@ handle_selection_changed(VteTerminal *terminal, gpointer data)
 
 struct config {
 	gchar *font;
-	gchar *geometry;
 	gint lines;
 	gchar *name;
 	gboolean allow_bold;
@@ -506,14 +505,6 @@ setup(int argc, char *argv[], int *exit_status)
 			.arg_data = &conf.font,
 			.description = "Specify a font to use",
 			.arg_description = "FONT",
-		},
-		{
-			.long_name = "geometry",
-			.short_name = 'g',
-			.arg = G_OPTION_ARG_STRING,
-			.arg_data = &conf.geometry,
-			.description = "Set the size (in characters) and position",
-			.arg_description = "GEOMETRY",
 		},
 		{
 			.long_name = "lines",
@@ -749,19 +740,7 @@ setup(int argc, char *argv[], int *exit_status)
 	g_signal_connect(window, "delete-event", G_CALLBACK(delete_event), widget);
 
 	gtk_widget_realize(widget);
-	if (conf.geometry) {
-		if (!gtk_window_parse_geometry(GTK_WINDOW(window), conf.geometry))
-			g_printerr("Error parsing geometry '%s'\n", conf.geometry);
-		g_free(conf.geometry);
-	} else {
-		/* As of GTK+ 2.91.0, the default size of a window comes from its minimum
-		 * size not its natural size, so we need to set the right default size
-		 * explicitly */
-		gtk_window_set_default_geometry(GTK_WINDOW(window),
-				vte_terminal_get_column_count(terminal),
-				vte_terminal_get_row_count(terminal));
-	}
-
+	vte_terminal_set_geometry_hints_for_window(terminal, GTK_WINDOW(window));
 	gtk_widget_show_all(window);
 	return TRUE;
 }
