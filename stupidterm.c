@@ -316,7 +316,7 @@ handle_selection_changed(VteTerminal *terminal, gpointer data)
 struct config {
 	gchar *font;
 	gint lines;
-	gchar *name;
+	gchar *role;
 	gboolean allow_bold;
 	gboolean scroll_on_output;
 	gboolean scroll_on_keystroke;
@@ -547,10 +547,12 @@ setup(int argc, char *argv[], int *exit_status)
 			.arg_description = "FILE",
 		},
 		{
-			.long_name = "name",
+			.long_name = "role",
+			.short_name = 'r',
 			.arg = G_OPTION_ARG_STRING,
-			.arg_data = &conf.name,
-			.description = "Specify the wmclass and name hint for the window",
+			.arg_data = &conf.role,
+			.description = "Set window role",
+			.arg_description = "ROLE",
 		},
 		{
 			.long_name = "allow-bold",
@@ -617,9 +619,9 @@ setup(int argc, char *argv[], int *exit_status)
 	 * delete event to the quit function.. */
 	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 
-	if (conf.name) {
-		gtk_window_set_wmclass(GTK_WINDOW(window), conf.name, conf.name);
-		g_free(conf.name);
+	if (conf.role) {
+		gtk_window_set_role(GTK_WINDOW(window), conf.role);
+		g_free(conf.role);
 	}
 
 	/* Set RGBA colormap */
