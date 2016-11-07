@@ -21,6 +21,11 @@
 #include <stdlib.h>
 #include <vte/vte.h>
 
+#ifdef VTE_TYPE_REGEX
+#define PCRE2_CODE_UNIT_WIDTH 8
+#include <pcre2.h>
+#endif
+
 static void
 window_title_changed(GtkWidget *widget, gpointer window)
 {
@@ -320,7 +325,11 @@ struct config {
 	gboolean urgent_on_bell;
 	gchar *output_file;
 	gchar **command_argv;
-	gchar *regex;
+#ifdef VTE_TYPE_REGEX
+	VteRegex *regex;
+#else
+	GRegex *regex;
+#endif
 	gchar *program;
 	GdkRGBA background;
 	GdkRGBA foreground;
@@ -384,6 +393,7 @@ static void
 parse_urlmatch(GKeyFile *file, const gchar *filename, struct config *conf)
 {
 	GError *error = NULL;
+	gchar *regex;
 
 	conf->program = g_key_file_get_string(file, "urlmatch", "program", &error);
 	if (error) {
@@ -398,7 +408,7 @@ parse_urlmatch(GKeyFile *file, const gchar *filename, struct config *conf)
 		return;
 	}
 
-	conf->regex = g_key_file_get_value(file, "urlmatch", "regex", &error);
+	regex = g_key_file_get_value(file, "urlmatch", "regex", &error);
 	if (error) {
 		if (error->code == G_KEY_FILE_ERROR_KEY_NOT_FOUND)
 			g_printerr("Error parsing '%s': "
@@ -412,6 +422,20 @@ parse_urlmatch(GKeyFile *file, const gchar *filename, struct config *conf)
 		conf->program = NULL;
 		return;
 	}
+
+#ifdef VTE_TYPE_REGEX
+	conf->regex = vte_regex_new_for_match(regex, -1, PCRE2_MULTILINE, &error);
+#else
+	conf->regex = g_regex_new(regex, G_REGEX_MULTILINE, 0, &error);
+#endif
+	if (error) {
+		g_printerr("Error compiling regex '%s': %s\n",
+				regex, error->message);
+		g_error_free(error);
+		g_free(conf->program);
+		conf->program = NULL;
+	}
+	g_free(regex);
 }
 
 static void
@@ -623,7 +647,8 @@ setup(int argc, char *argv[], int *exit_status)
 			G_CALLBACK(window_title_changed), window);
 
 	/* Connect to the "button-press" event. */
-	g_signal_connect(widget, "button-press-event", G_CALLBACK(button_pressed), conf.program);
+	if (conf.program)
+		g_signal_connect(widget, "button-press-event", G_CALLBACK(button_pressed), conf.program);
 
 	/* Connect to application request signals. */
 	g_signal_connect(widget, "iconify-window",
@@ -692,12 +717,14 @@ setup(int argc, char *argv[], int *exit_status)
 		g_free(conf.font);
 	}
 	if (conf.regex) {
-		GRegex *regex = g_regex_new(conf.regex, G_REGEX_MULTILINE, 0, NULL);
-		int id = vte_terminal_match_add_gregex(terminal, regex, 0);
-
-		g_regex_unref(regex);
+#ifdef VTE_TYPE_REGEX
+		int id = vte_terminal_match_add_regex(terminal, conf.regex, 0);
+		vte_regex_unref(conf.regex);
+#else
+		int id = vte_terminal_match_add_gregex(terminal, conf.regex, 0);
+		g_regex_unref(conf.regex);
+#endif
 		vte_terminal_match_set_cursor_type(terminal, id, GDK_HAND2);
-		g_free(conf.regex);
 	}
 
 	if (conf.command_argv == NULL || conf.command_argv[0] == NULL) {
