@@ -44,16 +44,6 @@ char_size_changed(GtkWidget *widget, guint width, guint height, gpointer window)
 }
 
 static void
-char_size_realized(GtkWidget *widget, gpointer window)
-{
-	if (!gtk_widget_get_realized(widget))
-		return;
-
-	vte_terminal_set_geometry_hints_for_window(
-			VTE_TERMINAL(widget), GTK_WINDOW(window));
-}
-
-static void
 handle_bell(GtkWidget *widget, gpointer window)
 {
 	gtk_window_set_urgency_hint(GTK_WINDOW(window), TRUE);
@@ -117,14 +107,14 @@ button_pressed(GtkWidget *widget, GdkEvent *event, gpointer program)
 
 	match = vte_terminal_match_check_event(VTE_TERMINAL(widget), event, &tag);
 	if (match != NULL) {
-		GError *err = NULL;
+		GError *error = NULL;
 		gchar *argv[3] = { program, match, NULL };
 
 		if (!g_spawn_async(NULL, argv, NULL,
 					G_SPAWN_SEARCH_PATH | G_SPAWN_STDOUT_TO_DEV_NULL,
-					NULL, NULL, NULL, &err)) {
-			g_printerr("%s\n", err->message);
-			g_error_free(err);
+					NULL, NULL, NULL, &error)) {
+			g_printerr("%s\n", error->message);
+			g_error_free(error);
 		}
 		g_free(match);
 	}
@@ -198,30 +188,31 @@ refresh_window(GtkWidget *widget, gpointer window)
 static void
 resize_window(GtkWidget *widget, guint width, guint height, gpointer window)
 {
-	VteTerminal *terminal;
+	VteTerminal *terminal = VTE_TERMINAL(widget);
+	glong row_count = vte_terminal_get_row_count(terminal);
+	glong column_count = vte_terminal_get_column_count(terminal);
+	glong char_width = vte_terminal_get_char_width(terminal);
+	glong char_height = vte_terminal_get_char_height(terminal);
+	gint owidth;
+	gint oheight;
+	GtkBorder padding;
 
-	if (width >= 2 && height >= 2) {
-		gint owidth, oheight, char_width, char_height, column_count, row_count;
-		GtkBorder padding;
+	if (width < 2)
+		width = 2;
+	if (height < 2)
+		height = 2;
 
-		terminal = VTE_TERMINAL(widget);
+	gtk_window_get_size(GTK_WINDOW(window), &owidth, &oheight);
 
-		gtk_window_get_size(GTK_WINDOW(window), &owidth, &oheight);
+	/* Take into account border overhead. */
+	gtk_style_context_get_padding(gtk_widget_get_style_context(widget),
+			gtk_widget_get_state_flags(widget),
+			&padding);
 
-		/* Take into account border overhead. */
-		char_width = vte_terminal_get_char_width(terminal);
-		char_height = vte_terminal_get_char_height(terminal);
-		column_count = vte_terminal_get_column_count(terminal);
-		row_count = vte_terminal_get_row_count(terminal);
-		gtk_style_context_get_padding(gtk_widget_get_style_context(widget),
-				gtk_widget_get_state_flags(widget),
-				&padding);
-
-		owidth -= char_width * column_count + padding.left + padding.right;
-		oheight -= char_height * row_count + padding.top + padding.bottom;
-		gtk_window_resize(GTK_WINDOW(window),
-				width + owidth, height + oheight);
-	}
+	owidth -= char_width * column_count + padding.left + padding.right;
+	oheight -= char_height * row_count + padding.top + padding.bottom;
+	gtk_window_resize(GTK_WINDOW(window),
+			width + owidth, height + oheight);
 }
 
 static void
@@ -236,20 +227,17 @@ move_window(GtkWidget *widget, guint x, guint y, gpointer window)
 static void
 adjust_font_size(GtkWidget *widget, GtkWindow *window, gdouble factor)
 {
-	VteTerminal *terminal;
+	VteTerminal *terminal = VTE_TERMINAL(widget);
+	glong rows = vte_terminal_get_row_count(terminal);
+	glong columns = vte_terminal_get_column_count(terminal);
+	glong char_width = vte_terminal_get_char_width(terminal);
+	glong char_height = vte_terminal_get_char_height(terminal);
+	gint owidth;
+	gint oheight;
 	gdouble scale;
-	glong char_width, char_height;
-	gint columns, rows, owidth, oheight;
-
-	/* Read the screen dimensions in cells. */
-	terminal = VTE_TERMINAL(widget);
-	columns = vte_terminal_get_column_count(terminal);
-	rows = vte_terminal_get_row_count(terminal);
 
 	/* Take into account padding and border overhead. */
 	gtk_window_get_size(window, &owidth, &oheight);
-	char_width = vte_terminal_get_char_width(terminal);
-	char_height = vte_terminal_get_char_height(terminal);
 	owidth -= char_width * columns;
 	oheight -= char_height * rows;
 
@@ -309,7 +297,8 @@ handle_key_press(GtkWidget *widget, GdkEvent *event, gpointer window)
 static gboolean
 handle_selection_changed(VteTerminal *terminal, gpointer data)
 {
-	vte_terminal_copy_clipboard(terminal);
+	if (vte_terminal_get_has_selection(terminal))
+		vte_terminal_copy_clipboard(terminal);
 	return TRUE;
 }
 
@@ -517,6 +506,16 @@ parse_file(struct config *conf, GOptionEntry *options)
 	g_free(filename);
 }
 
+static void
+set_rgba_colormap(GtkWidget *window)
+{
+	GdkScreen *screen = gtk_widget_get_screen(window);
+	GdkVisual *visual = gdk_screen_get_rgba_visual(screen);
+
+	if (visual)
+		gtk_widget_set_visual(window, visual);
+}
+
 static gboolean
 setup(int argc, char *argv[], int *exit_status)
 {
@@ -597,8 +596,6 @@ setup(int argc, char *argv[], int *exit_status)
 		},
 		{} /* terminator */
 	};
-	GdkScreen *screen;
-	GdkVisual *visual;
 	GtkWidget *window;
 	GtkWidget *widget;
 	VteTerminal *terminal;
@@ -618,17 +615,12 @@ setup(int argc, char *argv[], int *exit_status)
 	/* Create a window to hold the scrolling shell, and hook its
 	 * delete event to the quit function.. */
 	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	set_rgba_colormap(window);
 
 	if (conf.role) {
 		gtk_window_set_role(GTK_WINDOW(window), conf.role);
 		g_free(conf.role);
 	}
-
-	/* Set RGBA colormap */
-	screen = gtk_widget_get_screen(window);
-	visual = gdk_screen_get_rgba_visual(screen);
-	if (visual)
-		gtk_widget_set_visual(GTK_WIDGET(window), visual);
 
 	/* Create the terminal widget and add it to the window */
 	widget = vte_terminal_new();
@@ -637,11 +629,8 @@ setup(int argc, char *argv[], int *exit_status)
 
 	/* Connect to the "char_size_changed" signal to set geometry hints
 	 * whenever the font used by the terminal is changed. */
-	char_size_changed(widget, 0, 0, window);
 	g_signal_connect(widget, "char-size-changed",
 			G_CALLBACK(char_size_changed), window);
-	g_signal_connect(widget, "realize",
-			G_CALLBACK(char_size_realized), window);
 
 	/* Connect to the "window_title_changed" signal to set the main
 	 * window's title. */
@@ -650,7 +639,8 @@ setup(int argc, char *argv[], int *exit_status)
 
 	/* Connect to the "button-press" event. */
 	if (conf.program)
-		g_signal_connect(widget, "button-press-event", G_CALLBACK(button_pressed), conf.program);
+		g_signal_connect(widget, "button-press-event",
+				G_CALLBACK(button_pressed), conf.program);
 
 	/* Connect to application request signals. */
 	g_signal_connect(widget, "iconify-window",
@@ -681,10 +671,9 @@ setup(int argc, char *argv[], int *exit_status)
 			G_CALLBACK(handle_key_press), window);
 
 	/* Connect to bell signal */
-	if (conf.urgent_on_bell) {
-	    g_signal_connect(widget, "bell",
-			     G_CALLBACK(handle_bell), window);
-	}
+	if (conf.urgent_on_bell)
+		g_signal_connect(widget, "bell",
+				G_CALLBACK(handle_bell), window);
 
 	/* Sync clipboard */
 	if (conf.sync_clipboard)
@@ -758,6 +747,7 @@ setup(int argc, char *argv[], int *exit_status)
 				&error)) {
 		g_printerr("Failed to fork '%s': %s\n",
 				conf.command_argv[0], error->message);
+		g_error_free(error);
 		return FALSE;
 	}
 	g_strfreev(conf.command_argv);
