@@ -26,6 +26,8 @@
 #include <pcre2.h>
 #endif
 
+static int exit_status = EXIT_FAILURE;
+
 static void
 window_title_changed(GtkWidget *widget, gpointer window)
 {
@@ -59,16 +61,14 @@ destroy_and_quit(GtkWidget *window)
 static void
 delete_event(GtkWidget *window, GdkEvent *event, gpointer terminal)
 {
-	int *exit_status = g_object_get_data(G_OBJECT(window), "exit_status");
-	*exit_status = EXIT_SUCCESS;
+	exit_status = EXIT_SUCCESS;
 	destroy_and_quit(window);
 }
 
 static void
 child_exited(GtkWidget *terminal, int status, gpointer window)
 {
-	int *exit_status = g_object_get_data(G_OBJECT(window), "exit_status");
-	*exit_status = status;
+	exit_status = status;
 	destroy_and_quit(GTK_WIDGET(window));
 }
 
@@ -492,7 +492,7 @@ set_rgba_colormap(GtkWidget *window)
 }
 
 static gboolean
-setup(int argc, char *argv[], int *exit_status)
+setup(int argc, char *argv[])
 {
 	struct config conf = {};
 	GOptionEntry options[] = {
@@ -719,8 +719,6 @@ setup(int argc, char *argv[], int *exit_status)
 	}
 	g_strfreev(conf.command_argv);
 
-	g_object_set_data(G_OBJECT(window), "exit_status", (gpointer)exit_status);
-
 	g_signal_connect(widget, "child-exited", G_CALLBACK(child_exited), window);
 	g_signal_connect(window, "delete-event", G_CALLBACK(delete_event), widget);
 
@@ -733,9 +731,7 @@ setup(int argc, char *argv[], int *exit_status)
 int
 main(int argc, char *argv[])
 {
-	int exit_status = EXIT_FAILURE;
-
-	if (setup(argc, argv, &exit_status))
+	if (setup(argc, argv))
 		gtk_main();
 
 	return exit_status;
