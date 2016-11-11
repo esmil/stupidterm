@@ -50,32 +50,8 @@ handle_bell(GtkWidget *widget, gpointer window)
 }
 
 static void
-destroy_and_quit(VteTerminal *terminal, GtkWidget *window)
+destroy_and_quit(GtkWidget *window)
 {
-	const char *output_file = g_object_get_data(G_OBJECT(terminal), "output_file");
-
-	if (output_file) {
-		GFile *file;
-		GOutputStream *stream;
-		GError *error = NULL;
-
-		file = g_file_new_for_commandline_arg(output_file);
-		stream = G_OUTPUT_STREAM(g_file_replace(file, NULL, FALSE,
-					G_FILE_CREATE_NONE, NULL, &error));
-		if (stream) {
-			vte_terminal_write_contents_sync(terminal, stream,
-					VTE_WRITE_DEFAULT,
-					NULL, &error);
-			g_object_unref(stream);
-		}
-		if (error) {
-			g_printerr("Error writing to '%s': %s\n",
-					output_file, error->message);
-			g_error_free(error);
-		}
-		g_object_unref(file);
-	}
-
 	gtk_widget_destroy(window);
 	gtk_main_quit();
 }
@@ -85,7 +61,7 @@ delete_event(GtkWidget *window, GdkEvent *event, gpointer terminal)
 {
 	int *exit_status = g_object_get_data(G_OBJECT(window), "exit_status");
 	*exit_status = EXIT_SUCCESS;
-	destroy_and_quit(VTE_TERMINAL(terminal), window);
+	destroy_and_quit(window);
 }
 
 static void
@@ -93,7 +69,7 @@ child_exited(GtkWidget *terminal, int status, gpointer window)
 {
 	int *exit_status = g_object_get_data(G_OBJECT(window), "exit_status");
 	*exit_status = status;
-	destroy_and_quit(VTE_TERMINAL(terminal), GTK_WIDGET(window));
+	destroy_and_quit(GTK_WIDGET(window));
 }
 
 static int
@@ -312,7 +288,6 @@ struct config {
 	gboolean mouse_autohide;
 	gboolean sync_clipboard;
 	gboolean urgent_on_bell;
-	gchar *output_file;
 	gchar **command_argv;
 #ifdef VTE_TYPE_REGEX
 	VteRegex *regex;
@@ -538,14 +513,6 @@ setup(int argc, char *argv[], int *exit_status)
 			.arg_description = "LINES",
 		},
 		{
-			.long_name = "output-file",
-			.short_name = 'o',
-			.arg = G_OPTION_ARG_STRING,
-			.arg_data = &conf.output_file,
-			.description = "Save terminal contents to file at exit",
-			.arg_description = "FILE",
-		},
-		{
 			.long_name = "role",
 			.short_name = 'r',
 			.arg = G_OPTION_ARG_STRING,
@@ -752,7 +719,6 @@ setup(int argc, char *argv[], int *exit_status)
 	}
 	g_strfreev(conf.command_argv);
 
-	g_object_set_data(G_OBJECT(widget), "output_file", (gpointer)conf.output_file);
 	g_object_set_data(G_OBJECT(window), "exit_status", (gpointer)exit_status);
 
 	g_signal_connect(widget, "child-exited", G_CALLBACK(child_exited), window);
