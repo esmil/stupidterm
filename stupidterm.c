@@ -319,6 +319,7 @@ struct config {
 	gboolean sync_clipboard;
 	gboolean urgent_on_bell;
 	gchar *output_file;
+	gchar *config_file;
 	gchar **command_argv;
 	gchar *regex;
 	gchar *program;
@@ -417,9 +418,15 @@ parse_urlmatch(GKeyFile *file, const gchar *filename, struct config *conf)
 static void
 parse_file(struct config *conf, GOptionEntry *options)
 {
-	gchar *filename = g_build_filename(
+	gchar *filename;
+
+	if (conf->config_file)
+		filename = conf->config_file;
+	else
+		filename = g_build_filename(
 			g_get_user_config_dir(),
 			"stupidterm.ini", NULL);
+
 	GKeyFile *file = g_key_file_new();
 	GError *error = NULL;
 	GOptionEntry *entry;
@@ -520,6 +527,14 @@ setup(int argc, char *argv[], int *exit_status)
 			.arg = G_OPTION_ARG_STRING,
 			.arg_data = &conf.output_file,
 			.description = "Save terminal contents to file at exit",
+			.arg_description = "FILE",
+		},
+		{
+			.long_name = "config-file",
+			.short_name = 'c',
+			.arg = G_OPTION_ARG_STRING,
+			.arg_data = &conf.config_file,
+			.description = "Specify alternative config file",
 			.arg_description = "FILE",
 		},
 		{
