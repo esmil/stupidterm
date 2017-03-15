@@ -279,6 +279,7 @@ handle_selection_changed(VteTerminal *terminal, gpointer data)
 }
 
 struct config {
+	gchar *config_file;
 	gchar *font;
 	gint lines;
 	gchar *role;
@@ -405,13 +406,18 @@ parse_urlmatch(GKeyFile *file, const gchar *filename, struct config *conf)
 static void
 parse_file(struct config *conf, GOptionEntry *options)
 {
-	gchar *filename = g_build_filename(
-			g_get_user_config_dir(),
-			"stupidterm.ini", NULL);
 	GKeyFile *file = g_key_file_new();
 	GError *error = NULL;
 	GOptionEntry *entry;
 	gboolean option;
+	gchar *filename;
+
+	if (conf->config_file)
+		filename = conf->config_file;
+	else
+		filename = g_build_filename(
+				g_get_user_config_dir(),
+				"stupidterm.ini", NULL);
 
 	g_key_file_load_from_file(file, filename,
 				G_KEY_FILE_NONE, &error);
@@ -496,6 +502,14 @@ setup(int argc, char *argv[])
 {
 	struct config conf = {};
 	GOptionEntry options[] = {
+		{
+			.long_name = "config",
+			.short_name = 'c',
+			.arg = G_OPTION_ARG_STRING,
+			.arg_data = &conf.config_file,
+			.description = "Specify alternative config file",
+			.arg_description = "FILE",
+		},
 		{
 			.long_name = "font",
 			.short_name = 'f',
