@@ -502,6 +502,27 @@ parse_file(struct config *conf, GOptionEntry *options)
 	g_free(filename);
 }
 
+static void
+spawn_callback(VteTerminal *terminal, GPid pid, GError *error, gpointer data)
+{
+	GtkWidget *window = data;
+	GtkWidget *widget = GTK_WIDGET(terminal);
+
+	if (pid < 0) {
+		g_printerr("%s\n", error->message);
+		g_error_free(error);
+		destroy_and_quit(window);
+		return;
+	}
+
+	g_signal_connect(widget, "child-exited", G_CALLBACK(child_exited), window);
+	g_signal_connect(window, "delete-event", G_CALLBACK(delete_event), widget);
+
+	gtk_widget_realize(widget);
+	vte_terminal_set_geometry_hints_for_window(terminal, GTK_WINDOW(window));
+	gtk_widget_show_all(window);
+}
+
 static gboolean
 setup(int argc, char *argv[])
 {
@@ -586,7 +607,6 @@ setup(int argc, char *argv[])
 	GtkWidget *widget;
 	VteTerminal *terminal;
 	GError *error = NULL;
-	GPid pid = -1;
 
 	if (!gtk_init_with_args(&argc, &argv,
 				"[-- COMMAND] - stupid terminal",
@@ -727,29 +747,17 @@ setup(int argc, char *argv[])
 		}
 	}
 
-	if (!vte_terminal_spawn_sync(terminal,
-				VTE_PTY_DEFAULT,
-				NULL,
-				conf.command_argv,
-				NULL,
-				G_SPAWN_SEARCH_PATH,
-				NULL, NULL,
-				&pid,
-				NULL,
-				&error)) {
-		g_printerr("Failed to fork '%s': %s\n",
-				conf.command_argv[0], error->message);
-		g_error_free(error);
-		return FALSE;
-	}
+	vte_terminal_spawn_async(terminal,
+			VTE_PTY_DEFAULT,
+			NULL,
+			conf.command_argv,
+			NULL,
+			G_SPAWN_SEARCH_PATH,
+			NULL, NULL, NULL,
+			-1,
+			NULL,
+			&spawn_callback, window);
 	g_strfreev(conf.command_argv);
-
-	g_signal_connect(widget, "child-exited", G_CALLBACK(child_exited), window);
-	g_signal_connect(window, "delete-event", G_CALLBACK(delete_event), widget);
-
-	gtk_widget_realize(widget);
-	vte_terminal_set_geometry_hints_for_window(terminal, GTK_WINDOW(window));
-	gtk_widget_show_all(window);
 	return TRUE;
 }
 
