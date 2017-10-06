@@ -274,10 +274,12 @@ handle_key_press(GtkWidget *widget, GdkEvent *event, gpointer window)
 		}
 		switch (gdk_keyval_to_lower(event->key.keyval)) {
 		case GDK_KEY_c:
-			vte_terminal_copy_clipboard((VteTerminal*)widget);
+			vte_terminal_copy_clipboard_format(
+					(VteTerminal *)widget,
+					VTE_FORMAT_TEXT);
 			return TRUE;
 		case GDK_KEY_v:
-			vte_terminal_paste_clipboard((VteTerminal*)widget);
+			vte_terminal_paste_clipboard((VteTerminal *)widget);
 			return TRUE;
 		}
 	}
@@ -289,7 +291,9 @@ static gboolean
 handle_selection_changed(VteTerminal *terminal, gpointer data)
 {
 	if (vte_terminal_get_has_selection(terminal))
-		vte_terminal_copy_clipboard(terminal);
+		vte_terminal_copy_clipboard_format(
+				terminal,
+				VTE_FORMAT_TEXT);
 	return TRUE;
 }
 
