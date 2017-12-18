@@ -41,7 +41,7 @@ $ sudo make prefix=/usr install
 ```
 
 The git repo also includes a PKGBUILD for Archlinux and
-a spec-file for PRM based distros to build packages
+a spec-file for RPM based distros to build packages
 directly from git.
 
 
