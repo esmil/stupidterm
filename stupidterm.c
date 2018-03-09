@@ -29,6 +29,21 @@
 static int exit_status = EXIT_FAILURE;
 
 static void
+screen_changed(GtkWidget *widget, GdkScreen *old_screen, gpointer userdata)
+{
+	GdkScreen *screen = gtk_widget_get_screen(widget);
+	GdkVisual *visual = NULL;
+
+	if (gdk_screen_is_composited(screen))
+		visual = gdk_screen_get_rgba_visual(screen);
+
+	if (!visual)
+		visual = gdk_screen_get_system_visual(screen);
+
+	gtk_widget_set_visual(widget, visual);
+}
+
+static void
 window_title_changed(GtkWidget *widget, gpointer window)
 {
 	gtk_window_set_title(GTK_WINDOW(window),
@@ -487,16 +502,6 @@ parse_file(struct config *conf, GOptionEntry *options)
 	g_free(filename);
 }
 
-static void
-set_rgba_colormap(GtkWidget *window)
-{
-	GdkScreen *screen = gtk_widget_get_screen(window);
-	GdkVisual *visual = gdk_screen_get_rgba_visual(screen);
-
-	if (visual)
-		gtk_widget_set_visual(window, visual);
-}
-
 static gboolean
 setup(int argc, char *argv[])
 {
@@ -596,7 +601,10 @@ setup(int argc, char *argv[])
 	/* Create a window to hold the scrolling shell, and hook its
 	 * delete event to the quit function.. */
 	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	set_rgba_colormap(window);
+
+	/* Use rgba colour map if possible */
+	screen_changed(window, NULL, NULL);
+	g_signal_connect(window, "screen-changed", G_CALLBACK(screen_changed), NULL);
 
 	if (conf.role) {
 		gtk_window_set_role(GTK_WINDOW(window), conf.role);
