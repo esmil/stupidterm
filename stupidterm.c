@@ -602,6 +602,9 @@ setup(int argc, char *argv[])
 	 * delete event to the quit function.. */
 	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 
+	/* Fix transparency in GNOME/Mutter */
+	gtk_widget_set_app_paintable(window, TRUE);
+
 	/* Use rgba colour map if possible */
 	screen_changed(window, NULL, NULL);
 	g_signal_connect(window, "screen-changed", G_CALLBACK(screen_changed), NULL);
