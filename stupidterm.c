@@ -51,16 +51,6 @@ window_title_changed(GtkWidget *widget, gpointer window)
 }
 
 static void
-char_size_changed(GtkWidget *widget, guint width, guint height, gpointer window)
-{
-	if (!gtk_widget_get_realized(widget))
-		return;
-
-	vte_terminal_set_geometry_hints_for_window(
-			VTE_TERMINAL(widget), GTK_WINDOW(window));
-}
-
-static void
 handle_bell(GtkWidget *widget, gpointer window)
 {
 	gtk_window_set_urgency_hint(GTK_WINDOW(window), TRUE);
@@ -523,7 +513,6 @@ spawn_callback(VteTerminal *terminal, GPid pid, GError *error, gpointer data)
 	g_signal_connect(window, "delete-event", G_CALLBACK(delete_event), widget);
 
 	gtk_widget_realize(widget);
-	vte_terminal_set_geometry_hints_for_window(terminal, GTK_WINDOW(window));
 	gtk_widget_show_all(window);
 }
 
@@ -642,11 +631,6 @@ setup(int argc, char *argv[])
 	widget = vte_terminal_new();
 	terminal = VTE_TERMINAL(widget);
 	gtk_container_add(GTK_CONTAINER(window), widget);
-
-	/* Connect to the "char_size_changed" signal to set geometry hints
-	 * whenever the font used by the terminal is changed. */
-	g_signal_connect(widget, "char-size-changed",
-			G_CALLBACK(char_size_changed), window);
 
 	/* Connect to the "window_title_changed" signal to set the main
 	 * window's title. */
