@@ -44,6 +44,9 @@ The git repo also includes a PKGBUILD for Archlinux and
 a spec-file for RPM based distros to build packages
 directly from git.
 
+Packaging status:
+
+[![Packaging status](https://repology.org/badge/vertical-allrepos/stupidterm.svg)](https://repology.org/metapackage/stupidterm/versions)
 
 Configuring
 -----------
