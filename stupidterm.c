@@ -715,7 +715,7 @@ setup(int argc, char *argv[])
 		int id = vte_terminal_match_add_gregex(terminal, conf.regex, 0);
 		g_regex_unref(conf.regex);
 #endif
-		vte_terminal_match_set_cursor_type(terminal, id, GDK_HAND2);
+		vte_terminal_match_set_cursor_name(terminal, id, "pointer");
 	}
 
 	if (conf.command_argv == NULL || conf.command_argv[0] == NULL) {
