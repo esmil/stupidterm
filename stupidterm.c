@@ -743,6 +743,11 @@ setup(int argc, char *argv[])
 			g_free(conf.command_argv[0]);
 			conf.command_argv[0] = g_strdup(shell);
 		}
+	} else {
+		gchar *title = g_strjoinv(" ", conf.command_argv);
+
+		gtk_window_set_title(GTK_WINDOW(window), title);
+		g_free(title);
 	}
 
 	vte_terminal_spawn_async(terminal,
