@@ -56,6 +56,13 @@ handle_bell(GtkWidget *widget, gpointer window)
 	gtk_window_set_urgency_hint(GTK_WINDOW(window), TRUE);
 }
 
+static int
+handle_focus_in(GtkWidget *widget, GdkEvent *event, gpointer window)
+{
+	gtk_window_set_urgency_hint(GTK_WINDOW(window), FALSE);
+	return FALSE;
+}
+
 static void
 destroy_and_quit(GtkWidget *window)
 {
@@ -671,9 +678,12 @@ setup(int argc, char *argv[])
 			G_CALLBACK(handle_key_press), window);
 
 	/* Connect to bell signal */
-	if (conf.urgent_on_bell)
+	if (conf.urgent_on_bell) {
 		g_signal_connect(widget, "bell",
 				G_CALLBACK(handle_bell), window);
+		g_signal_connect(widget, "focus-in-event",
+				G_CALLBACK(handle_focus_in), window);
+	}
 
 	/* Sync clipboard */
 	if (conf.sync_clipboard)
