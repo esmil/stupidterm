@@ -299,7 +299,6 @@ struct config {
 	gchar *font;
 	gint lines;
 	gchar *role;
-	gboolean allow_bold;
 	gboolean scroll_on_output;
 	gboolean scroll_on_keystroke;
 	gboolean mouse_autohide;
@@ -561,12 +560,6 @@ setup(int argc, char *argv[])
 			.arg_description = "ROLE",
 		},
 		{
-			.long_name = "allow-bold",
-			.arg = G_OPTION_ARG_NONE,
-			.arg_data = &conf.allow_bold,
-			.description = "Toggle allow bold",
-		},
-		{
 			.long_name = "scroll-on-output",
 			.arg = G_OPTION_ARG_NONE,
 			.arg_data = &conf.scroll_on_output,
@@ -691,7 +684,6 @@ setup(int argc, char *argv[])
 				G_CALLBACK(handle_selection_changed), NULL);
 
 	/* Set some defaults. */
-	vte_terminal_set_allow_bold(terminal, conf.allow_bold);
 	vte_terminal_set_scroll_on_output(terminal, conf.scroll_on_output);
 	vte_terminal_set_scroll_on_keystroke(terminal, conf.scroll_on_keystroke);
 	vte_terminal_set_mouse_autohide(terminal, conf.mouse_autohide);
