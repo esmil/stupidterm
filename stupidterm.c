@@ -299,6 +299,7 @@ struct config {
 	gchar *font;
 	gint lines;
 	gchar *role;
+	gboolean nodecorations;
 	gboolean scroll_on_output;
 	gboolean scroll_on_keystroke;
 	gboolean mouse_autohide;
@@ -560,6 +561,12 @@ setup(int argc, char *argv[])
 			.arg_description = "ROLE",
 		},
 		{
+			.long_name = "no-decorations",
+			.arg = G_OPTION_ARG_NONE,
+			.arg_data = &conf.nodecorations,
+			.description = "Disable window decorations",
+		},
+		{
 			.long_name = "scroll-on-output",
 			.arg = G_OPTION_ARG_NONE,
 			.arg_data = &conf.scroll_on_output,
@@ -626,6 +633,9 @@ setup(int argc, char *argv[])
 		gtk_window_set_role(GTK_WINDOW(window), conf.role);
 		g_free(conf.role);
 	}
+
+	if (conf.nodecorations)
+		gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
 
 	/* Create the terminal widget and add it to the window */
 	widget = vte_terminal_new();
